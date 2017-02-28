@@ -255,7 +255,7 @@ export class UI {
             this.showFolderOrFileContentById(previousId);
         }
     };
-    
+
     /**
      * Helper function that clears content panel and returns it's div item
      * @return {*|HTMLElement}
