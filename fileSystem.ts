@@ -18,7 +18,7 @@ interface SaveFormatObject {
     content?: string
 }
 
-export class FileSystem {
+class FileSystem {
 
     lastAddedId: number;
     root: Folder;
@@ -88,7 +88,7 @@ export class FileSystem {
      * @param param - path (as a string) or id (as a number)
      * @return item object or null if not found.
      * */
-    getItem (param: number | string): Item {
+    getItem (param?: number | string): Item {
         if (param == undefined) {
             return this.root;
         }
@@ -336,6 +336,8 @@ export class FileSystem {
     // getPath(id)
 
 }
+
+export const fileSystem = new FileSystem();
 
 
 

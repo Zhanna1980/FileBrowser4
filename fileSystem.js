@@ -299,5 +299,5 @@ var FileSystem = (function () {
     };
     return FileSystem;
 }());
-exports.FileSystem = FileSystem;
+exports.fileSystem = new FileSystem();
 //# sourceMappingURL=fileSystem.js.map

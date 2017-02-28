@@ -1,8 +1,11 @@
 /**
  * Created by zhannalibman on 28/02/2017.
  */
-import {FileSystem} from "./fileSystem";
+import {UI} from "./ui";
+import * as $ from 'jquery';
+
 (function () {
-    var fs = new FileSystem();
-    console.log(fs.root);
+    $(document).ready(function () {
+        const ui = new UI();
+    });
 })();

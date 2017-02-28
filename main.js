@@ -2,9 +2,11 @@
 /**
  * Created by zhannalibman on 28/02/2017.
  */
-var fileSystem_1 = require("./fileSystem");
+var ui_1 = require("./ui");
+var $ = require('jquery');
 (function () {
-    var fs = new fileSystem_1.FileSystem();
-    console.log(fs.root);
+    $(document).ready(function () {
+        var ui = new ui_1.UI();
+    });
 })();
 //# sourceMappingURL=main.js.map
