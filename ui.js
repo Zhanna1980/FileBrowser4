@@ -5,7 +5,10 @@ var $ = require('jquery');
 var UI = (function () {
     function UI() {
         var _this = this;
-        this.handleEnterPath = function (event) {
+        /**
+         * Handles navigating to a new path.
+         * */
+        this.handleChangePath = function (event) {
             //if enter was pressed
             if (event.keyCode == 13) {
                 var path = $(event.currentTarget).val();
@@ -18,10 +21,6 @@ var UI = (function () {
                 }
             }
         };
-        this.handleRightClick = function (event) {
-            _this.showContextMenu(event);
-            return false;
-        };
         /**
          * Navigates back in the history.
          * */
@@ -29,7 +28,7 @@ var UI = (function () {
             if (!history_1.navigationHistory.hasBack()) {
                 return;
             }
-            if (!_this.showFolderOrFileContentById(history_1.navigationHistory.goBack(), true)) {
+            if (!_this.showFolderOrFileContentById(history_1.navigationHistory.goBack(), true /*skipHistory*/)) {
                 alert("Folder/file you want to open doesn't exist." +
                     " The previous folder/file (if it exists) will be opened.");
                 history_1.navigationHistory.deleteCurrentItemId(true /*goesBack*/);
@@ -43,7 +42,7 @@ var UI = (function () {
             if (!history_1.navigationHistory.hasForward()) {
                 return;
             }
-            if (!_this.showFolderOrFileContentById(history_1.navigationHistory.goForward(), true)) {
+            if (!_this.showFolderOrFileContentById(history_1.navigationHistory.goForward(), true /*skipHistory*/)) {
                 alert("Folder/file you want to open doesn't exist." +
                     " The next folder/file (if it exists) will be opened.");
                 history_1.navigationHistory.deleteCurrentItemId(false /*goesBack*/);
@@ -96,6 +95,22 @@ var UI = (function () {
             if (previousId != undefined) {
                 _this.showFolderOrFileContentById(previousId);
             }
+        };
+        /**
+         * Shows context menu according to event
+         * @param event - mouse click event
+         */
+        this.showContextMenu = function (event) {
+            var menuData = _this.getMenuDataForTarget($(event.currentTarget));
+            var menu = $(".menu");
+            menu.empty();
+            for (var i = 0; i < menuData.menuEntries.length; i++) {
+                menu.append(menuData.menuEntries[i]);
+            }
+            menu.css('left', event.pageX + 'px');
+            menu.css('top', event.pageY + 'px');
+            menu.attr("data-id", menuData.id).show();
+            return false;
         };
         /**
          * Handles rename item context menu entry
@@ -151,6 +166,9 @@ var UI = (function () {
         };
         this.initializeUI();
     }
+    /**
+     * Initializes UI.
+     * */
     UI.prototype.initializeUI = function () {
         history_1.navigationHistory.addToHistory(fileSystem_1.fileSystem.getItem().getId());
         this.updateUI();
@@ -162,7 +180,7 @@ var UI = (function () {
      * according to current item in navigation history
      * */
     UI.prototype.updateUI = function () {
-        this.showFolderOrFileContentById(history_1.navigationHistory.getCurrent(), true);
+        this.showFolderOrFileContentById(history_1.navigationHistory.getCurrent(), true /*skipHistory*/);
         var treeState = this.getExplorerState();
         this.showFoldersTree(treeState);
     };
@@ -174,8 +192,8 @@ var UI = (function () {
             return false;
         });
         $(window).click(this.hideContextMenu);
-        $("#content").contextmenu(this.handleRightClick);
-        $("#path").on('keydown', this.handleEnterPath);
+        $("#content").contextmenu(this.showContextMenu);
+        $("#path").on('keydown', this.handleChangePath);
         $("#btnBack").click(this.back);
         $("#btnForward").click(this.forward);
     };
@@ -222,7 +240,7 @@ var UI = (function () {
         ul.appendTo(elementInDom);
         elementInDom.find("div").click(this.onFolderIconClick);
         elementInDom.find("a").click(this.onFolderNameClick);
-        elementInDom.contextmenu(this.handleRightClick);
+        elementInDom.contextmenu(this.showContextMenu);
         return elementInDom;
     };
     /**
@@ -235,7 +253,7 @@ var UI = (function () {
         for (var i = 0; i < folderContent.length; i++) {
             var contentItem = $("<div data-id='" + folderContent[i].getId() + "'><div>" + folderContent[i].getName() + "</div></div>");
             contentItem.addClass("contentItem");
-            contentItem.contextmenu(this.handleRightClick);
+            contentItem.contextmenu(this.showContextMenu);
             if (folderContent[i].getType() === 0 /* Folder */) {
                 contentItem.attr("data-type", "folder");
                 $("<img src='_images/folder.png'/>").prependTo(contentItem);
@@ -277,22 +295,6 @@ var UI = (function () {
         var contentDiv = $("#content");
         contentDiv.empty();
         return contentDiv;
-    };
-    /**
-     * Shows context menu according to event
-     * @param event - mouse click event
-     */
-    UI.prototype.showContextMenu = function (event) {
-        var menuData = this.getMenuDataForTarget($(event.currentTarget));
-        var menu = $(".menu");
-        menu.empty();
-        for (var i = 0; i < menuData.menuEntries.length; i++) {
-            menu.append(menuData.menuEntries[i]);
-        }
-        menu.css('left', event.pageX + 'px');
-        menu.css('top', event.pageY + 'px');
-        menu.attr("data-id", menuData.id).show();
-        return false;
     };
     /**
      * Sets items of the context menu according to its target.

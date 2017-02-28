@@ -8,7 +8,7 @@ import {File} from "./file";
  * Created by zhannalibman on 28/02/2017.
  */
 
-interface State {
+interface TreeState {
     [propName: string]: boolean;
 }
 
@@ -23,6 +23,9 @@ export class UI {
         this.initializeUI();
     }
 
+    /**
+     * Initializes UI.
+     * */
     private initializeUI (): void {
         navigationHistory.addToHistory(fileSystem.getItem().getId());
         this.updateUI();
@@ -35,7 +38,7 @@ export class UI {
      * according to current item in navigation history
      * */
     private updateUI (): void {
-        this.showFolderOrFileContentById(navigationHistory.getCurrent(), true);
+        this.showFolderOrFileContentById(navigationHistory.getCurrent(), true /*skipHistory*/);
         const treeState = this.getExplorerState();
         this.showFoldersTree(treeState);
     }
@@ -48,13 +51,16 @@ export class UI {
             return false;
         });
         $(window).click(this.hideContextMenu);
-        $("#content").contextmenu(this.handleRightClick);
-        $("#path").on('keydown', this.handleEnterPath);
+        $("#content").contextmenu(this.showContextMenu);
+        $("#path").on('keydown', this.handleChangePath);
         $("#btnBack").click(this.back);
         $("#btnForward").click(this.forward);
     }
 
-    private handleEnterPath = (event: JQueryKeyEventObject): void => {
+    /**
+     * Handles navigating to a new path.
+     * */
+    private handleChangePath = (event: JQueryKeyEventObject): void => {
         //if enter was pressed
         if (event.keyCode == 13) {
             const path = $(event.currentTarget).val();
@@ -67,11 +73,6 @@ export class UI {
         }
     };
 
-    private handleRightClick = (event: JQueryMouseEventObject): boolean =>  {
-        this.showContextMenu(event);
-        return false;
-    };
-
     /**
      * Navigates back in the history.
      * */
@@ -79,10 +80,10 @@ export class UI {
         if (!navigationHistory.hasBack()) {
             return;
         }
-        if (!this.showFolderOrFileContentById(navigationHistory.goBack(), true)) {
+        if (!this.showFolderOrFileContentById(navigationHistory.goBack(), true /*skipHistory*/)) {
             alert("Folder/file you want to open doesn't exist." +
                 " The previous folder/file (if it exists) will be opened.");
-            navigationHistory.deleteCurrentItemId(true/*goesBack*/);
+            navigationHistory.deleteCurrentItemId(true /*goesBack*/);
             this.back();
         }
     };
@@ -94,10 +95,10 @@ export class UI {
         if (!navigationHistory.hasForward()) {
             return;
         }
-        if (!this.showFolderOrFileContentById(navigationHistory.goForward(), true)) {
+        if (!this.showFolderOrFileContentById(navigationHistory.goForward(), true /*skipHistory*/)) {
             alert("Folder/file you want to open doesn't exist." +
                 " The next folder/file (if it exists) will be opened.");
-            navigationHistory.deleteCurrentItemId(false/*goesBack*/);
+            navigationHistory.deleteCurrentItemId(false /*goesBack*/);
             this.forward();
         }
     };
@@ -106,7 +107,7 @@ export class UI {
      * Displays folder tree in the explorer.
      * @param collapsedElements - the object that represents the previous state of the tree.
      * */
-    private showFoldersTree (collapsedElements: State): void {
+    private showFoldersTree (collapsedElements: TreeState): void {
         const rootDomElement = $("#fs");
         rootDomElement.empty();
         this.showFoldersTreeRecursive(fileSystem.getItem(), rootDomElement, collapsedElements);
@@ -118,7 +119,7 @@ export class UI {
      * @param parentInDOM - parent html item  to which a new entry will be appended.
      * @param collapsedElements - the object that represents the previous state of the tree.
      * */
-    private showFoldersTreeRecursive (item: Item, parentInDOM: JQuery, collapsedElements?: State): void {
+    private showFoldersTreeRecursive (item: Item, parentInDOM: JQuery, collapsedElements?: TreeState): void {
         if (item.getType() === ITEM_TYPE.Folder) {
             const isCollapsed = collapsedElements == undefined || collapsedElements.hasOwnProperty(String(item.getId()));
             const ul = this.createFoldersListElement(item, parentInDOM, isCollapsed).find("ul");
@@ -147,7 +148,7 @@ export class UI {
         ul.appendTo(elementInDom);
         elementInDom.find("div").click(this.onFolderIconClick);
         elementInDom.find("a").click(this.onFolderNameClick);
-        elementInDom.contextmenu(this.handleRightClick);
+        elementInDom.contextmenu(this.showContextMenu);
         return elementInDom;
     }
 
@@ -184,7 +185,7 @@ export class UI {
         for (var i = 0; i < folderContent.length; i++) {
             const contentItem = $("<div data-id='" + folderContent[i].getId() + "'><div>" + folderContent[i].getName() + "</div></div>");
             contentItem.addClass("contentItem");
-            contentItem.contextmenu(this.handleRightClick);
+            contentItem.contextmenu(this.showContextMenu);
             if (folderContent[i].getType() === ITEM_TYPE.Folder) {
                 contentItem.attr("data-type", "folder");
                 $("<img src='_images/folder.png'/>").prependTo(contentItem);
@@ -254,8 +255,7 @@ export class UI {
             this.showFolderOrFileContentById(previousId);
         }
     };
-
-
+    
     /**
      * Helper function that clears content panel and returns it's div item
      * @return {*|HTMLElement}
@@ -270,7 +270,7 @@ export class UI {
      * Shows context menu according to event
      * @param event - mouse click event
      */
-    private showContextMenu (event: JQueryMouseEventObject): boolean {
+    private showContextMenu = (event: JQueryMouseEventObject): boolean => {
         const menuData = this.getMenuDataForTarget($(event.currentTarget));
         const menu = $(".menu");
         menu.empty();
@@ -390,7 +390,7 @@ export class UI {
     /**
      * Returns object that represents current expand/collapse state of explorer tree
      */
-    private getExplorerState (): State {
+    private getExplorerState (): TreeState {
         const treeEntries = $("li.folder");
         if(treeEntries.length == 0){
             return undefined;
