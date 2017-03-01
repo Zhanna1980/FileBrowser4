@@ -183,18 +183,17 @@ export class UI {
         const contentDiv = this.clearAndReturnContentDiv();
         const folderContent = folderItem.getChildren();
         for (var i = 0; i < folderContent.length; i++) {
-            const contentItem = $("<div data-id='" + folderContent[i].getId() + "'><div>" + folderContent[i].getName() + "</div></div>");
-            contentItem.addClass("contentItem");
-            contentItem.contextmenu(this.showContextMenu);
-            if (folderContent[i].getType() === ITEM_TYPE.Folder) {
-                contentItem.attr("data-type", "folder");
-                $("<img src='_images/folder.png'/>").prependTo(contentItem);
-            } else {
-                contentItem.attr("data-type", "file");
-                $("<img src='_images/file.png'/>").prependTo(contentItem);
-            }
+            const itemTypeString = folderContent[i].getType() === ITEM_TYPE.Folder ? "folder" : "file";
+            const contentItem = $("<div>")
+                .attr("data-id",folderContent[i].getId())
+                .attr("title",folderContent[i].getName())
+                .attr("data-type", itemTypeString)
+                .addClass("contentItem")
+                .contextmenu(this.showContextMenu)
+                .click(this.onContentItemClick)
+                .append($("<div>").html(folderContent[i].getName()))
+                .prepend("<img src='_images/"+itemTypeString+".png'/>");
             contentDiv.append(contentItem);
-            contentItem.click(this.onContentItemClick);
         }
     }
 
@@ -272,16 +271,19 @@ export class UI {
      */
     private showContextMenu = (event: JQueryMouseEventObject): boolean => {
         const menuData = this.getMenuDataForTarget($(event.currentTarget));
+        if(menuData === undefined) {
+            return false;
+        }
         const menu = $(".menu");
         menu.empty();
         for (var i = 0; i < menuData.menuEntries.length; i++) {
-            menu.append(menuData.menuEntries[i]);
+            menu.append(menuData.menuEntries[i].clone(true));
         }
         menu.css('left', event.pageX + 'px');
         menu.css('top', event.pageY + 'px');
         menu.attr("data-id", menuData.id).show();
         return false;
-    }
+    };
 
     /**
      * Sets items of the context menu according to its target.
@@ -290,39 +292,63 @@ export class UI {
      * to which the changes will be applied.
      * */
     private getMenuDataForTarget (target: JQuery): MenuData{
-        const newFolder = $("<div class='menuItem'>New folder</div>").click(this.createNewFolder);
-        const newFile = $("<div class='menuItem'>New file</div>").click(this.createNewFile);
-        const deleteFileOrFolder = $("<div class='menuItem'>Delete</div>").click(this.deleteElement);
-        const rename = $("<div class='menuItem'>Rename</div>").click(this.renameElement);
-        let menuEntries = [];
-        let id;
         if (target.is("li")) {
-            id = target.children('a').attr('data-id');
-            menuEntries = [newFolder, rename];
-            if (id > 0) {
-                menuEntries.push(deleteFileOrFolder);
-            }
+            return this.getMenuDataForTree(target);
         } else if (target.is("#content")) {
-            // no right click in content when file is opened
-            if ($(".fileDisplay").length !== 0) {
-                return;
-            }
-            id = navigationHistory.getCurrent();
-            menuEntries = [newFolder, newFile];
+            return this.getMenuDataForContent(target);
         } else if (target.is(".contentItem")) {
-            id = target.attr('data-id');
-            const type = $(target).attr("data-type");
-            if (type == "folder") {
-                menuEntries = [newFolder, newFile];
-            }
-            menuEntries.push(deleteFileOrFolder);
-            menuEntries.push(rename);
+            return this.getMenuDataForContentItem(target);
         }
+    }
 
-        return {
-            menuEntries: menuEntries,
-            id: id
+    /**
+     * Gets data for context menu for content items.
+     * @param target - the item on which was the right click.
+     * @return object with menu entries and the id of the item in the file system
+     * to which the changes will be applied.
+     * */
+    private getMenuDataForContentItem(target: JQuery) : MenuData {
+        let id = parseInt(target.attr('data-id'));
+        const type = $(target).attr("data-type");
+        let menuEntries = [];
+        if (type == "folder") {
+            menuEntries = [this.menuItemNewFolder, this.menuItemNewFile];
         }
+        menuEntries.push(this.menuItemDeleteFileOrFolder);
+        menuEntries.push(this.menuItemRename);
+        return {id, menuEntries};
+    }
+
+    /**
+     * Gets data for context menu for tree "li" elements.
+     * @param target - the item on which was the right click.
+     * @return object with menu entries and the id of the item in the file system
+     * to which the changes will be applied.
+     * */
+    private getMenuDataForTree (target: JQuery): MenuData {
+        let id = parseInt(target.children('a').attr('data-id'));
+        let menuEntries = [this.menuItemNewFolder, this.menuItemRename];
+        if (id > 0) {
+            menuEntries.push(this.menuItemDeleteFileOrFolder);
+        }
+        return {id, menuEntries};
+    }
+
+    /**
+     * Gets data for context menu for content "div".
+     * @param target - the item on which was the right click.
+     * @return object with menu entries and the id of the item in the file system
+     * to which the changes will be applied.
+     * */
+    private getMenuDataForContent (target: JQuery): MenuData {
+        // no right click in content when file is opened
+        if ($(".fileDisplay").length !== 0) {
+            return;
+        }
+        return {
+            id: navigationHistory.getCurrent(),
+            menuEntries: [this.menuItemNewFolder, this.menuItemNewFile]
+        };
     }
 
     /**
@@ -439,6 +465,12 @@ export class UI {
         this.displayPath(itemId);
         return true;
     }
+
+
+    private readonly menuItemNewFolder = $("<div class='menuItem'>New folder</div>").click(this.createNewFolder);
+    private readonly menuItemNewFile = $("<div class='menuItem'>New file</div>").click(this.createNewFile);
+    private readonly menuItemDeleteFileOrFolder = $("<div class='menuItem'>Delete</div>").click(this.deleteElement);
+    private readonly menuItemRename = $("<div class='menuItem'>Rename</div>").click(this.renameElement);
 
     //API:
     // constructor(fileSystem, history)

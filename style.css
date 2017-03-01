@@ -73,6 +73,7 @@ html, body {
     overflow: auto;
     text-align: center;
     padding: 0;
+    user-select: none;
 }
 
 #content {
@@ -140,11 +141,13 @@ a{
     margin: 15px;
     text-align: center;
     cursor: pointer;
+    user-select: none;
 }
 
 .contentItem>div{
     width: 150px;
     white-space: nowrap;
+    text-overflow: ellipsis;
     overflow: hidden;
 }
 

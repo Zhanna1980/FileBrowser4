@@ -102,10 +102,13 @@ var UI = (function () {
          */
         this.showContextMenu = function (event) {
             var menuData = _this.getMenuDataForTarget($(event.currentTarget));
+            if (menuData === undefined) {
+                return false;
+            }
             var menu = $(".menu");
             menu.empty();
             for (var i = 0; i < menuData.menuEntries.length; i++) {
-                menu.append(menuData.menuEntries[i]);
+                menu.append(menuData.menuEntries[i].clone(true));
             }
             menu.css('left', event.pageX + 'px');
             menu.css('top', event.pageY + 'px');
@@ -164,6 +167,10 @@ var UI = (function () {
             fileSystem_1.fileSystem.addFolder("", id);
             _this.updateUI();
         };
+        this.menuItemNewFolder = $("<div class='menuItem'>New folder</div>").click(this.createNewFolder);
+        this.menuItemNewFile = $("<div class='menuItem'>New file</div>").click(this.createNewFile);
+        this.menuItemDeleteFileOrFolder = $("<div class='menuItem'>Delete</div>").click(this.deleteElement);
+        this.menuItemRename = $("<div class='menuItem'>Rename</div>").click(this.renameElement);
         this.initializeUI();
     }
     /**
@@ -251,19 +258,17 @@ var UI = (function () {
         var contentDiv = this.clearAndReturnContentDiv();
         var folderContent = folderItem.getChildren();
         for (var i = 0; i < folderContent.length; i++) {
-            var contentItem = $("<div data-id='" + folderContent[i].getId() + "'><div>" + folderContent[i].getName() + "</div></div>");
-            contentItem.addClass("contentItem");
-            contentItem.contextmenu(this.showContextMenu);
-            if (folderContent[i].getType() === 0 /* Folder */) {
-                contentItem.attr("data-type", "folder");
-                $("<img src='_images/folder.png'/>").prependTo(contentItem);
-            }
-            else {
-                contentItem.attr("data-type", "file");
-                $("<img src='_images/file.png'/>").prependTo(contentItem);
-            }
+            var itemTypeString = folderContent[i].getType() === 0 /* Folder */ ? "folder" : "file";
+            var contentItem = $("<div>")
+                .attr("data-id", folderContent[i].getId())
+                .attr("title", folderContent[i].getName())
+                .attr("data-type", itemTypeString)
+                .addClass("contentItem")
+                .contextmenu(this.showContextMenu)
+                .click(this.onContentItemClick)
+                .append($("<div>").html(folderContent[i].getName()))
+                .prepend("<img src='_images/" + itemTypeString + ".png'/>");
             contentDiv.append(contentItem);
-            contentItem.click(this.onContentItemClick);
         }
     };
     /**
@@ -303,39 +308,61 @@ var UI = (function () {
      * to which the changes will be applied.
      * */
     UI.prototype.getMenuDataForTarget = function (target) {
-        var newFolder = $("<div class='menuItem'>New folder</div>").click(this.createNewFolder);
-        var newFile = $("<div class='menuItem'>New file</div>").click(this.createNewFile);
-        var deleteFileOrFolder = $("<div class='menuItem'>Delete</div>").click(this.deleteElement);
-        var rename = $("<div class='menuItem'>Rename</div>").click(this.renameElement);
-        var menuEntries = [];
-        var id;
         if (target.is("li")) {
-            id = target.children('a').attr('data-id');
-            menuEntries = [newFolder, rename];
-            if (id > 0) {
-                menuEntries.push(deleteFileOrFolder);
-            }
+            return this.getMenuDataForTree(target);
         }
         else if (target.is("#content")) {
-            // no right click in content when file is opened
-            if ($(".fileDisplay").length !== 0) {
-                return;
-            }
-            id = history_1.navigationHistory.getCurrent();
-            menuEntries = [newFolder, newFile];
+            return this.getMenuDataForContent(target);
         }
         else if (target.is(".contentItem")) {
-            id = target.attr('data-id');
-            var type = $(target).attr("data-type");
-            if (type == "folder") {
-                menuEntries = [newFolder, newFile];
-            }
-            menuEntries.push(deleteFileOrFolder);
-            menuEntries.push(rename);
+            return this.getMenuDataForContentItem(target);
+        }
+    };
+    /**
+     * Gets data for context menu for content items.
+     * @param target - the item on which was the right click.
+     * @return object with menu entries and the id of the item in the file system
+     * to which the changes will be applied.
+     * */
+    UI.prototype.getMenuDataForContentItem = function (target) {
+        var id = parseInt(target.attr('data-id'));
+        var type = $(target).attr("data-type");
+        var menuEntries = [];
+        if (type == "folder") {
+            menuEntries = [this.menuItemNewFolder, this.menuItemNewFile];
+        }
+        menuEntries.push(this.menuItemDeleteFileOrFolder);
+        menuEntries.push(this.menuItemRename);
+        return { id: id, menuEntries: menuEntries };
+    };
+    /**
+     * Gets data for context menu for tree "li" elements.
+     * @param target - the item on which was the right click.
+     * @return object with menu entries and the id of the item in the file system
+     * to which the changes will be applied.
+     * */
+    UI.prototype.getMenuDataForTree = function (target) {
+        var id = parseInt(target.children('a').attr('data-id'));
+        var menuEntries = [this.menuItemNewFolder, this.menuItemRename];
+        if (id > 0) {
+            menuEntries.push(this.menuItemDeleteFileOrFolder);
+        }
+        return { id: id, menuEntries: menuEntries };
+    };
+    /**
+     * Gets data for context menu for content "div".
+     * @param target - the item on which was the right click.
+     * @return object with menu entries and the id of the item in the file system
+     * to which the changes will be applied.
+     * */
+    UI.prototype.getMenuDataForContent = function (target) {
+        // no right click in content when file is opened
+        if ($(".fileDisplay").length !== 0) {
+            return;
         }
         return {
-            menuEntries: menuEntries,
-            id: id
+            id: history_1.navigationHistory.getCurrent(),
+            menuEntries: [this.menuItemNewFolder, this.menuItemNewFile]
         };
     };
     /**
