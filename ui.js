@@ -258,16 +258,16 @@ var UI = (function () {
         var contentDiv = this.clearAndReturnContentDiv();
         var folderContent = folderItem.getChildren();
         for (var i = 0; i < folderContent.length; i++) {
-            var itemTypeString = folderContent[i].getType() === 0 /* Folder */ ? "folder" : "file";
+            var imageName = folderContent[i].getType() === 0 /* Folder */ ? "folder" : "file";
             var contentItem = $("<div>")
                 .attr("data-id", folderContent[i].getId())
                 .attr("title", folderContent[i].getName())
-                .attr("data-type", itemTypeString)
+                .attr("data-type", folderContent[i].getType())
                 .addClass("contentItem")
                 .contextmenu(this.showContextMenu)
                 .click(this.onContentItemClick)
                 .append($("<div>").html(folderContent[i].getName()))
-                .prepend("<img src='_images/" + itemTypeString + ".png'/>");
+                .prepend("<img src='_images/" + imageName + ".png'/>");
             contentDiv.append(contentItem);
         }
     };
@@ -326,9 +326,9 @@ var UI = (function () {
      * */
     UI.prototype.getMenuDataForContentItem = function (target) {
         var id = parseInt(target.attr('data-id'));
-        var type = $(target).attr("data-type");
+        var type = parseInt($(target).attr("data-type"));
         var menuEntries = [];
-        if (type == "folder") {
+        if (type == 0 /* Folder */) {
             menuEntries = [this.menuItemNewFolder, this.menuItemNewFile];
         }
         menuEntries.push(this.menuItemDeleteFileOrFolder);

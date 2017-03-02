@@ -4,6 +4,10 @@ html, body {
     margin: 0;
 }
 
+button {
+    user-select: none;
+}
+
 .layout {
     display: flex;
     flex-direction: column;
